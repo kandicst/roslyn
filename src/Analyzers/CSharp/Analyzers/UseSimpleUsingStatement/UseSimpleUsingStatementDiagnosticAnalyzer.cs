@@ -77,9 +77,10 @@ namespace Microsoft.CodeAnalysis.CSharp.UseSimpleUsingStatement
         {
             var cancellationToken = context.CancellationToken;
             var outermostUsing = (UsingStatementSyntax)context.Node;
+            var parent = outermostUsing.Parent;
             var semanticModel = context.SemanticModel;
 
-            if (outermostUsing.Parent is not BlockSyntax parentBlock)
+            if (parent is not BlockSyntax && parent is not GlobalStatementSyntax)
             {
                 // Don't offer on a using statement that is parented by another using statement. We'll just offer on the
                 // topmost using statement.
@@ -98,7 +99,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseSimpleUsingStatement
             }
 
             // Verify that changing this using-statement into a using-declaration will not change semantics.
-            if (!PreservesSemantics(semanticModel, parentBlock, outermostUsing, innermostUsing, cancellationToken))
+            if (parent is BlockSyntax parentBlock && !PreservesSemantics(semanticModel, parentBlock, outermostUsing, innermostUsing, cancellationToken))
                 return;
 
             // Converting a using-statement to a using-variable-declaration will cause the using's variables to now be
@@ -106,7 +107,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseSimpleUsingStatement
             // block. These may then collide with other variables in the block, causing an error.  Check for that and
             // bail if this happens.
             if (CausesVariableCollision(
-                    context.SemanticModel, parentBlock,
+                    context.SemanticModel, parent,
                     outermostUsing, innermostUsing, cancellationToken))
             {
                 return;
@@ -126,11 +127,11 @@ namespace Microsoft.CodeAnalysis.CSharp.UseSimpleUsingStatement
         }
 
         private static bool CausesVariableCollision(
-            SemanticModel semanticModel, BlockSyntax parentBlock,
+            SemanticModel semanticModel, SyntaxNode parent,
             UsingStatementSyntax outermostUsing, UsingStatementSyntax innermostUsing,
             CancellationToken cancellationToken)
         {
-            var symbolNameToExistingSymbol = semanticModel.GetExistingSymbols(parentBlock, cancellationToken).ToLookup(s => s.Name);
+            var symbolNameToExistingSymbol = semanticModel.GetExistingSymbols(parent, cancellationToken).ToLookup(s => s.Name);
 
             for (var current = outermostUsing; current != null; current = current.Statement as UsingStatementSyntax)
             {

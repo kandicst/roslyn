@@ -51,19 +51,62 @@ namespace Microsoft.CodeAnalysis.CSharp.UseSimpleUsingStatement
             Document document, ImmutableArray<Diagnostic> diagnostics,
             SyntaxEditor editor, CodeActionOptionsProvider fallbackOptions, CancellationToken cancellationToken)
         {
-            var topmostUsingStatements = diagnostics.Select(d => (UsingStatementSyntax)d.AdditionalLocations[0].FindNode(cancellationToken)).ToSet();
-            var blocks = topmostUsingStatements.Select(u => (BlockSyntax)u.Parent);
+            var nodes = diagnostics.Select(d => d.AdditionalLocations[0].FindNode(cancellationToken)).ToSet();
+            var topMostUsingStatements = nodes.OfType<UsingStatementSyntax>().ToSet();
+            var globalStatement = nodes.OfType<GlobalStatementSyntax>().SingleOrDefault();
 
-            // Process blocks in reverse order so we rewrite from inside-to-outside with nested
-            // usings.
             var root = editor.OriginalRoot;
-            var updatedRoot = root.ReplaceNodes(
-                blocks.OrderByDescending(b => b.SpanStart),
-                (original, current) => RewriteBlock(original, current, topmostUsingStatements));
+            var updatedRoot = UpdateUsingStatements(root, topMostUsingStatements);
+
+            if (globalStatement != null)
+            {
+                updatedRoot = UpdateGlobalStatement(updatedRoot, globalStatement);
+            }
 
             editor.ReplaceNode(root, updatedRoot);
 
             return Task.CompletedTask;
+        }
+
+        private static SyntaxNode UpdateGlobalStatement(SyntaxNode root, GlobalStatementSyntax globalStatement)
+        {
+            var nodeToReplace = (CompilationUnitSyntax)globalStatement.Parent;
+
+            return root.ReplaceNode(nodeToReplace, RewriteGlobalStatement(nodeToReplace, globalStatement));
+        }
+
+        private static CompilationUnitSyntax RewriteGlobalStatement(CompilationUnitSyntax compilationUnit, GlobalStatementSyntax globalStatement)
+        {
+            var statementToUpdate = globalStatement.Statement;
+
+            if (statementToUpdate is UsingStatementSyntax usingStatement &&
+                usingStatement.Declaration != null)
+            {
+                var memberToUpdateIndex = compilationUnit.Members.IndexOf(globalStatement);
+
+                var updatedStatements = Expand(usingStatement)
+                    .Select(GlobalStatement);
+
+                var newMembers = compilationUnit.Members
+                    .RemoveAt(memberToUpdateIndex)
+                    .InsertRange(memberToUpdateIndex, updatedStatements);
+
+                return compilationUnit.WithMembers(newMembers);
+            }
+
+            return compilationUnit;
+        }
+
+        private static SyntaxNode UpdateUsingStatements(SyntaxNode root, ISet<UsingStatementSyntax> topMostUsingStatements)
+        {
+            var blocks = topMostUsingStatements.Select(u => (BlockSyntax)u.Parent);
+
+            // Process blocks in reverse order so we rewrite from inside-to-outside with nested
+            // usings.
+            return root.ReplaceNodes(
+                blocks.OrderByDescending(b => b.SpanStart),
+                (original, current) => RewriteBlock(original, current, topMostUsingStatements)
+            );
         }
 
         private static BlockSyntax RewriteBlock(

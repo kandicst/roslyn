@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.Diagnostics;
 using Microsoft.CodeAnalysis.Editor.UnitTests.CodeActions;
 using Microsoft.CodeAnalysis.Test.Utilities;
+using Microsoft.CodeAnalysis.Testing;
 using Roslyn.Test.Utilities;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,85 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.UseSimpleUsingStatement
     public class UseSimpleUsingStatementTests
     {
         [Fact]
-        public async Task TestAboveCSharp8()
+        public async Task TestSstefNew()
+        {
+            var test = new VerifyCS.Test
+            {
+                TestCode = """
+                    using System;
+
+                    [|using|] (var a = {|CS0103:b|})
+                    using (var c = {|CS0103:d|})
+                    {
+                    }
+                    """,
+                FixedCode = """
+                    using System;
+
+                    using var a = {|CS0103:b|};
+                    using var c = {|CS0103:d|};
+                    """,
+                LanguageVersion = LanguageVersion.CSharp9,
+            };
+
+            test.ExpectedDiagnostics.Add(
+                // /0/Test0.cs(2,1): error CS8805: Program using top-level statements must be an executable.
+                DiagnosticResult.CompilerError("CS8805").WithSpan(3, 1, 6, 2)
+            );
+
+            await test.RunAsync();
+        }
+
+        [Fact]
+        public async Task TestSstefNew2()
+        {
+            var test = new VerifyCS.Test
+            {
+                TestCode = """
+                    using System;
+
+                    [|using|] (var a = {|CS0103:b|})
+                    using (var c = {|CS0103:d|})
+                    {
+                        [|using|] (var e = {|CS0103:f|})
+                        using (var g = {|CS0103:h|})
+                        {
+                        }
+                    }
+
+                    int mm = 3;
+
+                    [|using|] (var x = {|CS0103:y|})
+                    using (var z = {|CS0103:u|})
+                    {
+                    }
+                    """,
+                FixedCode = """
+                    using System;
+
+                    using var a = {|CS0103:b|};
+                    using var c = {|CS0103:d|};
+                    using var e = {|CS0103:f|};
+                    using var g = {|CS0103:h|};
+
+                    int mm = 3;
+
+                    using var x = {|CS0103:y|};
+                    using var z = {|CS0103:u|};
+                    """,
+                LanguageVersion = LanguageVersion.CSharp9,
+            };
+
+            test.ExpectedDiagnostics.Add(
+                // /0/Test0.cs(2,1): error CS8805: Program using top-level statements must be an executable.
+                DiagnosticResult.CompilerError("CS8805").WithSpan(3, 1, 10, 2)
+            );
+
+            await test.RunAsync();
+        }
+
+        [Fact]
+        public async Task TestAboveCSharp8Sstef()
         {
             await VerifyCS.VerifyCodeFixAsync("""
                 using System;
