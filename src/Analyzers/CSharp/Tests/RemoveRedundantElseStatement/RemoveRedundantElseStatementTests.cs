@@ -36,11 +36,11 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                 {
                     int Fib(int n) 
                     {
-                        if (n <= 2)
+                        [|if|] (n <= 2)
                         {
                             return 1;
                         }
-                        [|else|]
+                        else
                         {
                             return Fib(n - 1) + Fib(n - 2);
                         }
@@ -74,9 +74,9 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                 {
                     int Fib(int n) 
                     {
-                        if (n <= 2)
+                        [|if|] (n <= 2)
                             return 1;
-                        [|else|]
+                        else
                             return Fib(n - 1) + Fib(n - 2);
                     }
                 }
@@ -106,7 +106,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                 {
                     int Fib(int n) 
                     {
-                        if (n < 0)
+                        [|if|] (n < 0)
                         {
                             throw new ArgumentException("n can't be negative");
                         }
@@ -114,7 +114,7 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                         {
                             return 1;
                         }
-                        [|else|]
+                        else
                         {
                             return Fib(n - 1) + Fib(n - 2);
                         }
@@ -183,11 +183,11 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                         int i = 0;
                         while (true)
                         {
-                            if (i == n)
+                            [|if|] (i == n)
                             {
                                 break;
                             }
-                            [|else|]
+                            else
                             {
                                 i++;
                             }
@@ -233,12 +233,12 @@ namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.RemoveRedundantElseStat
                         int i = 0;
                         while (true)
                         {
-                            if (i < n)
+                            [|if|] (i < n)
                             {
                                 i+=1;
                                 continue;
                             }
-                            [|else|]
+                            else
                             {
                                 return i;
                             }

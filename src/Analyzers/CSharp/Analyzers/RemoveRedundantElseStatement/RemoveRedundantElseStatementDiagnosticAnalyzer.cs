@@ -85,9 +85,9 @@ namespace Microsoft.CodeAnalysis.CSharp.RemoveRedundantElseStatement
             {
                 context.ReportDiagnostic(DiagnosticHelper.Create(
                     Descriptor,
-                    redundantElse.ElseKeyword.GetLocation(),
+                    ifStatement.IfKeyword.GetLocation(),
                     option.Notification.Severity,
-                    additionalLocations: ImmutableArray.Create(redundantElse.GetLocation()),
+                    additionalLocations: ImmutableArray.Create(ifStatement.GetLocation(), redundantElse.GetLocation()),
                     properties: null));
             }
         }
